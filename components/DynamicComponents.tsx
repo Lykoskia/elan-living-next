@@ -1,0 +1,35 @@
+import dynamic from "next/dynamic"
+
+export const DynamicComponents = {
+  aboutCard: dynamic(() => import("@/components/AboutCard"), { ssr: false }),
+  allPosts: dynamic(() => import("@/components/AllPosts"), { ssr: false }),
+  article: dynamic(() => import("@/components/ArticlePage"), { ssr: false }),
+  callToAction: dynamic(() => import("@/components/CallToAction"), { ssr: false }),
+  cardGroup: dynamic(() => import("@/components/CardGroup"), { ssr: false }),
+  cards: dynamic(() => import("@/components/Cards"), { ssr: false }),
+  carousel: dynamic(() => import("@/components/Carousel"), { ssr: false }),
+  featureCards: dynamic(() => import("@/components/FeatureCards"), { ssr: false }),
+  /*featuredArticles: dynamic(() => import("@/components/FeaturedArticles"), { ssr: false }),*/
+  heroSection: dynamic(() => import("@/components/HeroSection"), { ssr: true }),
+  heroSectionFlat: dynamic(() => import("@/components/HeroSectionFlat"), { ssr: true }),
+  iconGrid: dynamic(() => import("@/components/IconGrid"), { ssr: false }),
+  /*iconsWithLabels: dynamic(() => import("@/components/IconsWithLabels"), { ssr: false }),*/
+  jobCard: dynamic(() => import("@/components/JobCard"), { ssr: false }),
+  jobForm: dynamic(() => import("@/components/JobForm"), { ssr: false }),
+  jobs: dynamic(() => import("@/components/JobListingSection"), { ssr: false }),
+  kutak: dynamic(() => import("@/components/Kutak"), { ssr: false }),
+  layoutGridTextImages: dynamic(() => import("@/components/FeatureSection"), { ssr: false }),
+  layoutGridSplitText: dynamic(() => import("@/components/FeatureSectionText"), { ssr: false }),
+  map: dynamic(() => import("@/components/MapComponent"), { ssr: false }),
+  parallaxSection: dynamic(() => import("@/components/ParallaxSection"), { ssr: false }),
+  parallaxSectionCenter: dynamic(() => import("@/components/ParallaxSectionCenter"), { ssr: false }),
+  referralForm: dynamic(() => import("@/components/ReferralForm"), { ssr: false }),
+  requestForm: dynamic(() => import("@/components/RequestForm"), { ssr: false }),
+  review: dynamic(() => import("@/components/ReviewSection"), { ssr: false }),
+  richTextOptionalTitle: dynamic(() => import("@/components/RichTextOptionalTitle"), { ssr: false }),
+  richTextOptionalTitleCenter: dynamic(() => import("@/components/RichTextOptionalTitleCenter"), { ssr: false }),
+  steps: dynamic(() => import("@/components/Steps"), { ssr: false }),
+  testimonials: dynamic(() => import("@/components/Testimonials"), { ssr: false }),
+  wallOfText: dynamic(() => import("@/components/WallOfText"), { ssr: false }),
+  wallOfTextBanner: dynamic(() => import("@/components/WallOfTextBanner"), { ssr: false }),
+}
