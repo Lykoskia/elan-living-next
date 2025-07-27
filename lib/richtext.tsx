@@ -76,7 +76,7 @@ function renderNodeByType(node: StrapiRichTextNode): React.ReactNode {
       return renderContent(node.content || node.children)
 
     case "paragraph":
-      return <p className="mb-6 text-gray-700 leading-relaxed">{renderContent(node.content || node.children)}</p>
+      return <p>{renderContent(node.content || node.children)}</p>
 
     case "heading":
       const level = (node.attrs && typeof node.attrs === 'object' && 'level' in node.attrs && typeof node.attrs.level === 'number') 

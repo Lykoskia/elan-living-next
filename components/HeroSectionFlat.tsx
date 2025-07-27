@@ -96,7 +96,7 @@ export default function HeroSectionFlat({
               href={buttonUrl}
               target={buttonLink?.isExternal ? "_blank" : undefined}
               rel={buttonLink?.isExternal ? "noopener noreferrer" : undefined}
-              className="text-[12px] leading-[42px] tracking-[1px] uppercase w-[213px] h-[66px] rounded-full text-center hover:bg-elangreen hover:text-white transition-all flex items-center justify-center mt-[20px]"
+              className="text-[12px] leading-[42px] tracking-[1px] uppercase w-[213px] h-[66px] rounded-full bg-white text-[#222] text-center hover:bg-elangreen hover:text-white transition-all flex items-center justify-center mt-[20px]"
             >
               {buttonLabel}
             </Link>
