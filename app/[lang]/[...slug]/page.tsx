@@ -74,7 +74,7 @@ function getArticleSlug(path: string): string {
 export async function generateMetadata({
   params
 }: {
-  params: { lang: string; slug: string[] }
+  params: Promise<{ lang: string; slug: string[] }>
 }): Promise<Metadata> {
   const { lang, slug } = await params;
   const { actualLang, actualSlug, isDefaultLocale } = parseRouteParams(lang, slug);
@@ -199,7 +199,7 @@ export async function generateMetadata({
 export default async function NestedPage({
   params
 }: {
-  params: { lang: string; slug: string[] }
+  params: Promise<{ lang: string; slug: string[] }>
 }) {
   const { lang, slug } = await params;
   const { actualLang, actualSlug, isDefaultLocale } = parseRouteParams(lang, slug);

@@ -27,7 +27,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({
   params,
 }: {
-  params: { lang: string };
+  params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
   const { lang } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elan-living.com';
@@ -127,7 +127,7 @@ export async function generateMetadata({
 export default async function DynamicRoute({
   params,
 }: {
-  params: { lang: string };
+  params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
 
