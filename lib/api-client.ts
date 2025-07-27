@@ -113,7 +113,7 @@ export async function getGlobalData(locale: string) {
     }
 
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 600 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -160,7 +160,7 @@ export async function getHomepage(locale: string) {
     }
 
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 600 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -228,10 +228,8 @@ export async function getArticles(options: ApiQueryOptions = {}): Promise<{ data
 
     const url = `${apiUrl}/api/articles?${params.toString()}`;
 
-    console.log(`🔍 Fetching articles: ${url}`);
-
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 60 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -246,7 +244,6 @@ export async function getArticles(options: ApiQueryOptions = {}): Promise<{ data
     }
 
     const result = await response.json();
-    console.log(`✅ Articles API success for ${safeLocale} - Found ${result.data?.length || 0} articles`);
 
     return result;
 
@@ -295,7 +292,7 @@ export async function getArticleBySlug(slug: string, locale: string): Promise<Ar
     const url = `${apiUrl}/api/articles?${params.toString()}`;
 
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 60 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -385,10 +382,9 @@ export async function getJobs(params: GetJobsParams = {}): Promise<JobsResponse 
     }
 
     const url = `${apiUrl}/api/jobs?${searchParams.toString()}`
-    console.log('🔍 Fetching jobs from:', url)
 
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 60 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -403,7 +399,6 @@ export async function getJobs(params: GetJobsParams = {}): Promise<JobsResponse 
     }
 
     const data: JobsResponse = await response.json()
-    console.log('✅ Jobs fetched successfully:', data.data.length, 'jobs')
 
     return data
   } catch (error) {
@@ -443,10 +438,9 @@ export async function getJobById(id: number, locale: string = DEFAULT_LOCALE): P
     searchParams.append('populate', 'image')
 
     const url = `${apiUrl}/api/jobs/${id}?${searchParams.toString()}`
-    console.log('🔍 Fetching job from:', url)
 
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 60 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -461,7 +455,6 @@ export async function getJobById(id: number, locale: string = DEFAULT_LOCALE): P
     }
 
     const data = await response.json()
-    console.log('✅ Job fetched successfully:', data.data.title || `Job #${data.data.id}`)
 
     return data.data
   } catch (error) {
@@ -499,7 +492,7 @@ export async function getAllKutakArticles(locale: string = 'hr'): Promise<Proces
     const url = `${apiUrl}/api/kutak-articles?${params.toString()}`;
 
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 60 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -547,7 +540,6 @@ export async function getAllKutakArticles(locale: string = 'hr'): Promise<Proces
 export async function likeKutakArticle(documentId: string): Promise<KutakLikeResponse> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL || 'http://localhost:1337';
-    console.log(`🔍 Liking article with documentId: ${documentId}`);
 
     const response = await fetch(`${apiUrl}/api/kutak-articles/${documentId}/like`, {
       method: 'POST',
@@ -562,7 +554,6 @@ export async function likeKutakArticle(documentId: string): Promise<KutakLikeRes
     }
 
     const result = await response.json();
-    console.log(`✅ Like result:`, result);
 
     return {
       success: result.success || true,
@@ -583,7 +574,6 @@ export async function likeKutakArticle(documentId: string): Promise<KutakLikeRes
 export async function unlikeKutakArticle(documentId: string): Promise<KutakLikeResponse> {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL || 'http://localhost:1337';
-    console.log(`🔍 Unliking article with documentId: ${documentId}`);
 
     const response = await fetch(`${apiUrl}/api/kutak-articles/${documentId}/unlike`, {
       method: 'POST',
@@ -598,7 +588,6 @@ export async function unlikeKutakArticle(documentId: string): Promise<KutakLikeR
     }
 
     const result = await response.json();
-    console.log(`✅ Unlike result:`, result);
 
     return {
       success: result.success || true,
@@ -636,7 +625,7 @@ export async function getPageBySlug(slug: string, locale: string) {
     }
 
     const response = await fetch(url, {
-      cache: 'no-store',
+      next: { revalidate: 60 },
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
