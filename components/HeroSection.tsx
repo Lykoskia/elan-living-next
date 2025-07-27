@@ -173,7 +173,7 @@ export default function HeroSection({
               <div className="my-12">
                 <Link
                   href={linkUrl}
-                  className="text-[12px] leading-[42px] tracking-[1px] uppercase w-[213px] h-[66px] rounded-full bg-white text-[#222] text-center hover:bg-elangreen hover:text-white transition-all flex items-center justify-center"
+                  className="text-[12px] leading-[42px] tracking-[1px] uppercase w-[213px] h-[66px] rounded-full text-center hover:bg-elangreen hover:text-white transition-all flex items-center justify-center"
                   {...(buttonLink.isExternal && {
                     target: buttonLink.target || '_blank',
                     rel: 'noopener noreferrer'
