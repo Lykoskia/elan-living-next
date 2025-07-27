@@ -10,12 +10,11 @@ const nextConfig = {
       },
     ],
     formats: ['image/webp', 'image/avif'],
-    quality: 80,
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
 
-  // Optimize bundle size
+  // Optimize bundle size and enable experimental features
   experimental: {
     optimizePackageImports: [
       '@heroicons/react',
@@ -66,19 +65,11 @@ const nextConfig = {
     } : false,
   },
 
-  // ✅Better compression
+  // Better compression
   compress: true,
-
-  // Reduce bundle size
-  swcMinify: true,
 
   // Enable standalone output for better deployment
   output: 'standalone',
-
-  // Better performance monitoring
-  experimental: {
-    instrumentationHook: true,
-  },
 };
 
 module.exports = nextConfig;
