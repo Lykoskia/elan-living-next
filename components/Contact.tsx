@@ -214,7 +214,7 @@ export default function Contact(props: ContactProps) {
     // Add your Strapi base URL
     const imageUrl = image.url.startsWith('http')
       ? image.url
-      : `${process.env.NEXT_PUBLIC_STRAPI_URL || 'http://localhost:1337'}${image.url}`
+      : `${process.env.NEXT_PUBLIC_STRAPI_API_URL || 'http://localhost:1337'}${image.url}`
 
     const iconElement = (
       <Image
