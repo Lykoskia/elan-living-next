@@ -8,12 +8,11 @@ import { RichText } from "@/lib/richtext";
 import type { Article, StrapiRichText } from "@/lib/types/strapi";
 
 interface BlogListingSectionProps {
-  // Configurable props from Strapi dynamic zone
   featuredTitle?: string;
   allTitle?: string;
   showFeatured?: boolean;
   featuredCount?: number;
-  articlesPerPage?: number; // Now controls UI pagination, not API fetch!
+  articlesPerPage?: number;
   showFilters?: boolean;
   showSearch?: boolean;
   introText?: StrapiRichText;
@@ -72,20 +71,16 @@ export default function BlogListingSection({
   locale = 'hr',
   isDefaultLocale = true
 }: BlogListingSectionProps) {
-  // State for articles data
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>([]);
   const [allArticles, setAllArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // State for filtering and sorting
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSort, setSelectedSort] = useState<SortOptionValue>('newest');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [filtersVisible, setFiltersVisible] = useState(false);
-
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
+  const [featuredCurrentPage, setFeaturedCurrentPage] = useState(1);
 
   // Fetch articles on component mount
   useEffect(() => {
@@ -94,11 +89,9 @@ export default function BlogListingSection({
         setLoading(true);
         setError(null);
 
-        console.log(`🔍 Fetching articles for locale: ${locale}`);
-
         const articlesResponse = await getArticles({
           locale,
-          sort: ['publishDate:desc']
+          sort: ['publishDate:desc'] // Latest first by default
         });
 
         if (!articlesResponse || !articlesResponse.data) {
@@ -108,13 +101,13 @@ export default function BlogListingSection({
         const processedAllArticles = processMediaUrls(articlesResponse.data);
         setAllArticles(processedAllArticles);
 
-        // If featured articles are enabled, filter them from all articles
         if (showFeatured) {
-          const featuredFromAll = processedAllArticles
+          const allFeaturedArticles = processedAllArticles
             .filter((article: Article) => article.featured)
-            .slice(0, featuredCount);
+            .sort((a: Article, b: Article) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime());
 
-          setFeaturedArticles(featuredFromAll);
+          setFeaturedArticles(allFeaturedArticles);
+          
         }
 
       } catch (err) {
@@ -126,9 +119,8 @@ export default function BlogListingSection({
     }
 
     fetchArticles();
-  }, [locale, showFeatured, featuredCount]);
+  }, [locale, showFeatured]);
 
-  // Extract all unique categories from articles
   const allCategories = useMemo(() => {
     const categorySet = new Set<string>();
     allArticles.forEach((article) => {
@@ -138,6 +130,25 @@ export default function BlogListingSection({
     });
     return Array.from(categorySet).sort();
   }, [allArticles]);
+
+  const featuredPagination = useMemo(() => {
+    const totalFeatured = featuredArticles.length;
+    const totalFeaturedPages = Math.ceil(totalFeatured / featuredCount);
+    const startIndex = (featuredCurrentPage - 1) * featuredCount;
+    const endIndex = startIndex + featuredCount;
+    const currentPageFeatured = featuredArticles.slice(startIndex, endIndex);
+
+    return {
+      totalFeatured,
+      totalFeaturedPages,
+      startIndex,
+      endIndex,
+      currentPageFeatured,
+      hasNextFeatured: featuredCurrentPage < totalFeaturedPages,
+      hasPreviousFeatured: featuredCurrentPage > 1,
+      showPagination: totalFeaturedPages > 1 // Only show pagination if more than 1 page
+    };
+  }, [featuredArticles, featuredCurrentPage, featuredCount]);
 
   // Filter and sort articles (before pagination)
   const filteredAndSortedArticles = useMemo(() => {
@@ -170,7 +181,6 @@ export default function BlogListingSection({
     return filtered;
   }, [allArticles, searchTerm, selectedTag, selectedSort, showSearch]);
 
-  // Calculate pagination info
   const paginationInfo = useMemo(() => {
     const totalArticles = filteredAndSortedArticles.length;
     const totalPages = Math.ceil(totalArticles / articlesPerPage);
@@ -189,22 +199,20 @@ export default function BlogListingSection({
     };
   }, [filteredAndSortedArticles, currentPage, articlesPerPage]);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters change (regular articles)
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedTag, selectedSort]);
 
-  // Clear all filters
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedTag(null);
-    setSelectedSort('newest');
-    setCurrentPage(1);
+  const goToFeaturedPage = (page: number) => {
+    if (page >= 1 && page <= featuredPagination.totalFeaturedPages) {
+      setFeaturedCurrentPage(page);
+    }
   };
 
-  const hasActiveFilters = searchTerm || selectedTag || selectedSort !== 'newest';
+  const goToNextFeatured = () => goToFeaturedPage(featuredCurrentPage + 1);
+  const goToPreviousFeatured = () => goToFeaturedPage(featuredCurrentPage - 1);
 
-  // Pagination handlers
   const goToPage = (page: number) => {
     if (page >= 1 && page <= paginationInfo.totalPages) {
       setCurrentPage(page);
@@ -214,18 +222,26 @@ export default function BlogListingSection({
   const goToNextPage = () => goToPage(currentPage + 1);
   const goToPreviousPage = () => goToPage(currentPage - 1);
 
-  // Generate page numbers for pagination
-  const getPageNumbers = (): (number | string)[] => {
-    const { totalPages } = paginationInfo;
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedTag(null);
+    setSelectedSort('newest');
+    setCurrentPage(1);
+  };
+
+  const hasActiveFilters = searchTerm || selectedTag || selectedSort !== 'newest';
+
+  // Generate page numbers for pagination (both regular and featured articles)
+  const getPageNumbers = (currentPageNum: number, totalPages: number): (number | string)[] => {
     const delta = 2; // Show 2 pages before and after current page
     const range: number[] = [];
     const rangeWithDots: (number | string)[] = [];
 
-    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+    for (let i = Math.max(2, currentPageNum - delta); i <= Math.min(totalPages - 1, currentPageNum + delta); i++) {
       range.push(i);
     }
 
-    if (currentPage - delta > 2) {
+    if (currentPageNum - delta > 2) {
       rangeWithDots.push(1, '...');
     } else {
       rangeWithDots.push(1);
@@ -233,7 +249,7 @@ export default function BlogListingSection({
 
     rangeWithDots.push(...range);
 
-    if (currentPage + delta < totalPages - 1) {
+    if (currentPageNum + delta < totalPages - 1) {
       rangeWithDots.push('...', totalPages);
     } else {
       if (totalPages > 1) rangeWithDots.push(totalPages);
@@ -289,33 +305,92 @@ export default function BlogListingSection({
       )}
       <div className="container mx-auto px-4 max-w-7xl">
 
-        {/* Featured Articles Section */}
-        {showFeatured && featuredArticles && featuredArticles.length > 0 && (
+        {/* Featured Articles Section with Pagination */}
+        {showFeatured && featuredArticles.length > 0 && (
           <div className="mb-20">
+            {/* Clean header - no pagination controls */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
                 {featuredTitle}
               </h2>
             </div>
 
+            {/* Show current page of featured articles */}
             <PostCardGrid className="mb-8">
-              {/* First featured article gets special treatment */}
-              <FeaturedPostCard
-                article={featuredArticles[0]}
-                locale={locale}
-                isDefaultLocale={isDefaultLocale}
-              />
-
-              {/* Rest of featured articles in normal grid */}
-              {featuredArticles.slice(1, 5).map((article) => (
-                <PostCard
-                  key={article.id}
-                  article={article}
-                  locale={locale}
-                  isDefaultLocale={isDefaultLocale}
-                />
+              {featuredPagination.currentPageFeatured.map((article, index) => (
+                // First article in the page gets special featured treatment
+                index === 0 ? (
+                  <FeaturedPostCard
+                    key={article.id}
+                    article={article}
+                    locale={locale}
+                    isDefaultLocale={isDefaultLocale}
+                  />
+                ) : (
+                  <PostCard
+                    key={article.id}
+                    article={article}
+                    locale={locale}
+                    isDefaultLocale={isDefaultLocale}
+                  />
+                )
               ))}
             </PostCardGrid>
+
+            {/* Full-width pagination matching regular articles style */}
+            {featuredPagination.showPagination && (
+              <div className="flex items-center justify-center mb-8">
+                <nav className="flex items-center space-x-2">
+                  {/* Previous Button */}
+                  <button
+                    onClick={goToPreviousFeatured}
+                    disabled={!featuredPagination.hasPreviousFeatured}
+                    className={`flex items-center px-3 py-2 rounded-lg font-medium transition-colors ${
+                      featuredPagination.hasPreviousFeatured
+                        ? 'text-elanpurple hover:bg-elanpurple/10 hover:text-elanpurple/80'
+                        : 'text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <ChevronLeftIcon className="h-5 w-5 mr-1" />
+                    Prethodna
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="flex items-center space-x-1">
+                    {getPageNumbers(featuredCurrentPage, featuredPagination.totalFeaturedPages).map((pageNumber, index) => (
+                      <button
+                        key={index}
+                        onClick={() => typeof pageNumber === 'number' ? goToFeaturedPage(pageNumber) : undefined}
+                        disabled={pageNumber === '...'}
+                        className={`px-3 py-2 rounded-lg font-medium transition-colors ${
+                          pageNumber === featuredCurrentPage
+                            ? 'bg-elanpurple text-white'
+                            : pageNumber === '...'
+                            ? 'text-gray-400 cursor-default'
+                            : 'text-gray-700 hover:bg-elanpurple/10 hover:text-elanpurple'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={goToNextFeatured}
+                    disabled={!featuredPagination.hasNextFeatured}
+                    className={`flex items-center px-3 py-2 rounded-lg font-medium transition-colors ${
+                      featuredPagination.hasNextFeatured
+                        ? 'text-elanpurple hover:bg-elanpurple/10 hover:text-elanpurple/80'
+                        : 'text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Sljedeća
+                    <ChevronRightIcon className="h-5 w-5 ml-1" />
+                  </button>
+                </nav>
+              </div>
+            )}
           </div>
         )}
 
@@ -476,7 +551,7 @@ export default function BlogListingSection({
 
                     {/* Page Numbers */}
                     <div className="flex items-center space-x-1">
-                      {getPageNumbers().map((pageNumber, index) => (
+                      {getPageNumbers(currentPage, paginationInfo.totalPages).map((pageNumber, index) => (
                         <button
                           key={index}
                           onClick={() => typeof pageNumber === 'number' ? goToPage(pageNumber) : undefined}
