@@ -11,7 +11,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'http',
-        hostname: 'localhost',
+        hostname: 'elan-living-strapi-production.up.railway.app',
         port: '1337',
         pathname: '/uploads/**',
       },

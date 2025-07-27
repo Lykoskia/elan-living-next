@@ -45,11 +45,12 @@ export default function FeatureSection({
 }: FeatureSectionProps) {
   const { ref, inView } = useInView({
     triggerOnce: true,
-    threshold: 0.01,
+    threshold: 0.1,
+    rootMargin: '100px 0px',
+    skip: false,
   });
 
-  // Animation and layout classes (preserving original styling)
-  const animationText = inView ? "animate-slide-in-top" : "";
+  // Animation and layout classes
   const flexDirection = text_left ? "xl:flex-row" : "xl:flex-row-reverse";
   const justifyContent = text_left ? "justify-end" : "justify-start";
 
@@ -69,6 +70,9 @@ export default function FeatureSection({
     ? getLocalizedUrl(buttonHref, locale)
     : getLocalizedUrl("/contact", locale);
 
+  const buttonText = button || buttonLink?.label;
+  const shouldShowButton = buttonLink && buttonText;
+
   // Don't render if no primary image (excluding placeholder)
   if (!image1Url || image1Url === '/placeholder.svg') {
     console.warn('FeatureSection: No primary image found, not rendering component');
@@ -81,7 +85,15 @@ export default function FeatureSection({
       ref={ref}
     >
       <div
-        className={`flex flex-col ${flexDirection} items-center justify-center md:gap-[26px] ${animationText}`}
+        className={`flex flex-col ${flexDirection} items-center justify-center md:gap-[26px] transition-transform duration-700 ease-out ${
+          inView 
+            ? "translate-y-0 opacity-100"
+            : "translate-y-12 opacity-0"
+        }`}
+        style={{ 
+          willChange: inView ? 'auto' : 'transform, opacity', // Performance hint
+          backfaceVisibility: 'hidden', // Prevent flickering
+        }}
       >
         {/* Text Content Section */}
         <div
@@ -107,13 +119,12 @@ export default function FeatureSection({
             </div>
           )}
 
-          {/* Button rendering */}
-          {button && button.length > 0 && buttonLink && (
+          {shouldShowButton && (
             <Link 
               href={linkUrl} 
               className="text-[12px] leading-[32px] tracking-[1px] uppercase px-[26px] py-[12px] rounded-full border-2 border-[#859b44] bg-transparent text-[#222] text-center hover:bg-[#ac7cb4] hover:border-[#ac7cb4] hover:text-white transition-all flex items-center justify-center mt-[61px]"
             >
-              {button}
+              {buttonText}
             </Link>
           )}
         </div>
@@ -122,13 +133,17 @@ export default function FeatureSection({
         <div
           className={`w-[360px] md:w-[533px] relative flex items-center ${justifyContent}`}
         >
-          {/* Primary Image */}
           <Image
             src={image1Url}
             alt={image1Alt}
             width={533}
             height={500}
+            sizes="(max-width: 768px) 360px, 533px" 
+            quality={80}
+            priority={false}
             className="w-[360px] md:w-[533px] h-[500px] rounded-[30px] shadow-[rgba(31,32,34,0.1)_0px_60px_60px_-15px] object-cover"
+            placeholder="blur"
+            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R7+H9v4D6v0A"
           />
           
           {/* Overlay Content */}
@@ -137,10 +152,13 @@ export default function FeatureSection({
             <div className="absolute bottom-[-5%] left-[-10%] lg:left-[-5%] md:top-[359px] min-w-[364px] max-w-[440px] min-h-[160px] px-[35px] py-[30px] flex flex-col items-center justify-center bg-white text-[#1f2022] rounded-[30px] shadow-[rgba(31,32,34,0.1)_0px_60px_60px_-15px]">
               <div className="w-full flex items-center justify-start gap-[15px] mb-[16px]">
                 {iconUrl && iconUrl !== '/placeholder.svg' && (
-                  <img
+                  <Image
                     src={iconUrl}
                     alt={iconAlt}
+                    width={28}
+                    height={32}
                     className="max-w-[28px] max-h-[32px]"
+                    quality={90}
                   />
                 )}
                 <h4 className="text-[19px] md:text-[20px] font-sans leading-[26.4px]">
@@ -154,14 +172,17 @@ export default function FeatureSection({
               )}
             </div>
           ) : (
-            /* Otherwise, show image_2 if it exists */
             image2Url && image2Url !== '/placeholder.svg' && (
               <Image
                 src={image2Url}
                 alt={image2Alt}
                 width={300}
                 height={300}
+                sizes="300px"
+                quality={80}
                 className="absolute bottom-[-7.5%] left-[-10%] w-[300px] h-[300px] rounded-[30px] shadow-[rgba(31,32,34,0.1)_0px_60px_60px_-15px] object-cover"
+                placeholder="blur"
+                blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R7+H9v4D6v0A"
               />
             )
           )}

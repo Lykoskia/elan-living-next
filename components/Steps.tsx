@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useInView } from "react-intersection-observer"
 
-// Component props interface matching dynamic zone structure
 interface StepsProps {
   id?: number
-  __component?: "shared.steps" // Strapi component type
+  __component?: "shared.steps"
   title?: string
   description?: string
   step1title?: string
@@ -33,26 +32,32 @@ export default function Steps({
 
   const { ref, inView } = useInView({
     triggerOnce: true,
-    threshold: 0.01,
+    threshold: 0.1,
+    rootMargin: '50px 0px',
+    skip: false,
   })
 
-  useEffect(() => {
-    let step2Timeout: NodeJS.Timeout
-    let step3Timeout: NodeJS.Timeout
-
-    if (inView) {
+  const startAnimations = useCallback(() => {
+    requestAnimationFrame(() => {
       setShowStep1(true)
-      step2Timeout = setTimeout(() => setShowStep2(true), 400)
-      step3Timeout = setTimeout(() => setShowStep3(true), 800)
-    }
+    })
+    
+    // Stagger subsequent animations
+    setTimeout(() => {
+      requestAnimationFrame(() => setShowStep2(true))
+    }, 200)
+    
+    setTimeout(() => {
+      requestAnimationFrame(() => setShowStep3(true))
+    }, 400)
+  }, [])
 
-    return () => {
-      clearTimeout(step2Timeout)
-      clearTimeout(step3Timeout)
+  useEffect(() => {
+    if (inView) {
+      startAnimations()
     }
-  }, [inView])
+  }, [inView, startAnimations])
 
-  // Check if we have any step content (either title or description)
   const hasStep1 = step1title || step1
   const hasStep2 = step2title || step2  
   const hasStep3 = step3title || step3
@@ -77,12 +82,23 @@ export default function Steps({
           </p>
         )}
       </div>
-      <div ref={ref} className="flex flex-col md:flex-row justify-evenly items-center w-full my-12 gap-8 md:gap-0">
+      
+      <div 
+        ref={ref} 
+        className="flex flex-col md:flex-row justify-evenly items-center w-full my-12 gap-8 md:gap-0"
+        style={{ willChange: inView ? 'auto' : 'transform' }} // Hint to browser about animations
+      >
         {hasStep1 && (
           <div
-            className={`flex flex-col items-center justify-center w-full md:w-1/4 transition-all duration-500 ${
-              showStep1 ? "animate-slide-in-top" : "opacity-0"
+            className={`flex flex-col items-center justify-center w-full md:w-1/4 transition-transform duration-500 ease-out ${
+              showStep1 
+                ? "translate-y-0 opacity-100"
+                : "translate-y-8 opacity-0"
             }`}
+            style={{ 
+              willChange: showStep1 ? 'auto' : 'transform, opacity',
+              backfaceVisibility: 'hidden', // Prevent flickering
+            }}
           >
             <div className="text-[30px] flex justify-center items-center bg-elangreen rounded-full w-[70px] h-[70px] mb-4 md:mb-8 italic text-white shadow-[0_0_0_15px_rgba(133,155,68,0.1)]">
               1
@@ -95,11 +111,18 @@ export default function Steps({
             )}
           </div>
         )}
+        
         {hasStep2 && (
           <div
-            className={`flex flex-col items-center justify-center w-full md:w-1/4 transition-all duration-500 ${
-              showStep2 ? "animate-slide-in-top" : "opacity-0"
+            className={`flex flex-col items-center justify-center w-full md:w-1/4 transition-transform duration-500 ease-out ${
+              showStep2 
+                ? "translate-y-0 opacity-100"
+                : "translate-y-8 opacity-0"
             }`}
+            style={{ 
+              willChange: showStep2 ? 'auto' : 'transform, opacity',
+              backfaceVisibility: 'hidden',
+            }}
           >
             <div className="text-[30px] flex justify-center items-center bg-elanpurple rounded-full w-[70px] h-[70px] mb-4 md:mb-8 italic text-white shadow-[0_0_0_15px_rgba(133,155,68,0.1)]">
               2
@@ -112,11 +135,18 @@ export default function Steps({
             )}
           </div>
         )}
+        
         {hasStep3 && (
           <div
-            className={`flex flex-col items-center justify-center w-full md:w-1/4 transition-all duration-500 ${
-              showStep3 ? "animate-slide-in-top" : "opacity-0"
+            className={`flex flex-col items-center justify-center w-full md:w-1/4 transition-transform duration-500 ease-out ${
+              showStep3 
+                ? "translate-y-0 opacity-100"
+                : "translate-y-8 opacity-0"
             }`}
+            style={{ 
+              willChange: showStep3 ? 'auto' : 'transform, opacity',
+              backfaceVisibility: 'hidden',
+            }}
           >
             <div className="text-[30px] flex justify-center items-center bg-elanbrown rounded-full w-[70px] h-[70px] mb-4 md:mb-8 italic text-white shadow-[0_0_0_15px_rgba(133,155,68,0.1)]">
               3
