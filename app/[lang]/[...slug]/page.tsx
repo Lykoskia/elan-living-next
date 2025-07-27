@@ -1,24 +1,67 @@
-import { Suspense } from 'react';
 import {
   getPageBySlug,
-  getGlobalData,
   getArticleBySlug,
   processMediaUrls,
   DEFAULT_LOCALE,
   VALID_LOCALES
 } from '@/lib/api-client';
 import { renderPageSections } from '@/lib/components-registry';
-import { Spinner } from '@/components/Spinner';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import ArticlePage from '@/components/ArticlePage';
-import { 
-  type Article,
-  getStrapiImageUrl 
-} from '@/lib/types/strapi';
+import NavbarWithSuspense from "@/components/NavbarWithSuspense";
+import Footer from "@/components/Footer";
+import BackToTopButton from "@/components/BackToTopButton";
+import { type Article, getStrapiImageUrl } from '@/lib/types/strapi';
 
-export const experimental_ppr = true;
-export const revalidate = 60;
+// Different revalidation for articles vs pages
+export const revalidate = 60; // 1 minute for articles
+
+export async function generateStaticParams() {
+  // Pre-generate common routes to avoid confusion
+  const routes = [];
+  
+  // For each locale, generate common routes
+  VALID_LOCALES.forEach(lang => {
+    // Common pages
+    routes.push(
+      { lang, slug: ['about'] },
+      { lang, slug: ['services'] },
+      { lang, slug: ['contact'] },
+      { lang, slug: ['blog'] }
+    );
+  });
+  
+  // Add some blog article examples (these will be generated on-demand via ISR)
+  routes.push(
+    { lang: DEFAULT_LOCALE, slug: ['blog', 'sample-article'] },
+    { lang: 'en', slug: ['blog', 'sample-article'] },
+    { lang: 'de', slug: ['blog', 'sample-article'] }
+  );
+
+  return routes;
+}
+
+// Route parsing logic to handle language vs content confusion
+function parseRouteParams(lang: string, slug: string[]) {
+  let actualLang: string;
+  let actualSlug: string[];
+  let isDefaultLocale: boolean;
+
+  if (VALID_LOCALES.includes(lang)) {
+    // First segment is a valid language
+    actualLang = lang;
+    actualSlug = slug;
+    isDefaultLocale = lang === DEFAULT_LOCALE;
+  } else {
+    // First segment is NOT a language, treat as content in default locale
+    actualLang = DEFAULT_LOCALE;
+    actualSlug = [lang, ...slug];
+    isDefaultLocale = true;
+  }
+
+  return { actualLang, actualSlug, isDefaultLocale };
+}
 
 function isArticlePage(path: string): boolean {
   return path.startsWith('blog/') && path !== 'blog';
@@ -34,25 +77,7 @@ export async function generateMetadata({
   params: { lang: string; slug: string[] }
 }): Promise<Metadata> {
   const { lang, slug } = await params;
-
-  let actualLang: string;
-  let actualSlug: string[];
-  let isDefaultLocale: boolean;
-
-  if (lang === 'blog') {
-    actualLang = DEFAULT_LOCALE;
-    actualSlug = ['blog', ...slug];
-    isDefaultLocale = true;
-  } else if (VALID_LOCALES.includes(lang)) {
-    actualLang = lang;
-    actualSlug = slug;
-    isDefaultLocale = lang === DEFAULT_LOCALE;
-  } else {
-    actualLang = DEFAULT_LOCALE;
-    actualSlug = [lang, ...slug];
-    isDefaultLocale = true;
-  }
-
+  const { actualLang, actualSlug, isDefaultLocale } = parseRouteParams(lang, slug);
   const path = actualSlug.join('/');
 
   // Skip non-page requests
@@ -60,35 +85,22 @@ export async function generateMetadata({
     return {};
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elanliving.hr';
-  const strapiUrl = process.env.NEXT_PUBLIC_STRAPI_API_URL || 'http://localhost:1337';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://elan-living.com';
 
   try {
-    const globalData = await getGlobalData(actualLang);
-    const siteName = globalData?.siteName || 'ELAN Living';
-
-    let pageTitle = '';
-    let description = '';
-    let ogImage = '';
+    const siteName = 'ELAN Living';
 
     if (isArticlePage(path)) {
       const articleSlug = getArticleSlug(path);
       const article: Article | null = await getArticleBySlug(articleSlug, actualLang);
 
       if (article) {
-        pageTitle = article.title;
-        description = article.description || `Read the full article: ${article.title}`;
-        
-        // ✅ Use utility function instead of direct property access
-        ogImage = getStrapiImageUrl(article.cover, '');
-
-        const fullTitle = `${siteName} | ${pageTitle}`;
+        const fullTitle = `${article.title} | ${siteName}`;
+        const description = article.description || `Read the full article: ${article.title}`;
+        const ogImage = getStrapiImageUrl(article.cover);
         const pageUrl = isDefaultLocale
           ? `${baseUrl}/${path}`
-          : `${baseUrl}/${actualLang}/${actualSlug.slice(0, -1).join('/')}`;
-
-        // ✅ Safe author access with optional chaining
-        const authorNames = article.author?.name ? [article.author.name] : undefined;
+          : `${baseUrl}/${actualLang}/${actualSlug.join('/')}`;
 
         return {
           title: fullTitle,
@@ -101,50 +113,43 @@ export async function generateMetadata({
             type: 'article',
             url: pageUrl,
             publishedTime: article.publishDate,
-            authors: authorNames,
+            authors: article.author?.name ? [article.author.name] : undefined,
             images: ogImage ? [{
-              url: ogImage.startsWith('http') ? ogImage : `${strapiUrl}${ogImage}`,
+              url: ogImage,
               width: 1200,
               height: 630,
-              alt: pageTitle
+              alt: article.title
             }] : undefined,
           },
           twitter: {
             card: 'summary_large_image',
             title: fullTitle,
             description: description,
-            images: ogImage ? [ogImage.startsWith('http') ? ogImage : `${strapiUrl}${ogImage}`] : undefined,
+            images: ogImage ? [ogImage] : undefined,
           },
           alternates: {
-            languages: {
-              'hr': `${baseUrl}/${path}`,
-              'en': `${baseUrl}/en/${path}`,
-              'de': `${baseUrl}/de/${path}`,
-            }
+            languages: VALID_LOCALES.reduce((acc, locale) => {
+              acc[locale] = locale === DEFAULT_LOCALE 
+                ? `${baseUrl}/${path}`
+                : `${baseUrl}/${locale}/${path}`;
+              return acc;
+            }, {} as Record<string, string>)
           }
         };
       }
     }
 
-    const [pageData] = await Promise.all([
-      getPageBySlug(path, actualLang)
-    ]);
-
+    // Regular page
+    const pageData = await getPageBySlug(path, actualLang);
     const page = Array.isArray(pageData) ? pageData[0] : pageData;
 
-    pageTitle = page?.title || path.split('-').map(word =>
+    const pageTitle = page?.title || path.split('/').pop()?.split('-').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    ).join(' ') || 'Page';
 
-    const fullTitle = `${siteName} | ${pageTitle}`;
-
-    description = page?.seo?.metaDescription ||
-      page?.description ||
-      globalData?.siteDescription || '';
-
-    // ✅ Safe property access for SEO images
-    ogImage = getStrapiImageUrl(page?.seo?.shareImage, '') ||
-      getStrapiImageUrl(globalData?.defaultSeo?.shareImage, '');
+    const fullTitle = `${pageTitle} | ${siteName}`;
+    const description = page?.seo?.metaDescription || page?.description || '';
+    const ogImage = getStrapiImageUrl(page?.seo?.shareImage);
 
     const pageUrl = isDefaultLocale
       ? `${baseUrl}/${path}`
@@ -158,10 +163,10 @@ export async function generateMetadata({
         description: description,
         siteName: siteName,
         locale: actualLang,
-        type: isArticlePage(path) ? 'article' : 'website',
+        type: 'website',
         url: pageUrl,
         images: ogImage ? [{
-          url: ogImage.startsWith('http') ? ogImage : `${strapiUrl}${ogImage}`,
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: pageTitle
@@ -171,18 +176,15 @@ export async function generateMetadata({
         card: 'summary_large_image',
         title: fullTitle,
         description: description,
-        images: ogImage ? [ogImage.startsWith('http') ? ogImage : `${strapiUrl}${ogImage}`] : undefined,
+        images: ogImage ? [ogImage] : undefined,
       },
-      // ✅ Safe favicon access
-      icons: globalData?.favicon ? {
-        icon: getStrapiImageUrl(globalData.favicon, '')
-      } : undefined,
       alternates: {
-        languages: {
-          'hr': `${baseUrl}/${path}`,
-          'en': `${baseUrl}/en/${path}`,
-          'de': `${baseUrl}/de/${path}`,
-        }
+        languages: VALID_LOCALES.reduce((acc, locale) => {
+          acc[locale] = locale === DEFAULT_LOCALE 
+            ? `${baseUrl}/${path}`
+            : `${baseUrl}/${locale}/${path}`;
+          return acc;
+        }, {} as Record<string, string>)
       }
     };
   } catch (error) {
@@ -194,54 +196,36 @@ export async function generateMetadata({
   }
 }
 
-export default async function LanguagePageWithSlug({
+export default async function NestedPage({
   params
 }: {
   params: { lang: string; slug: string[] }
 }) {
   const { lang, slug } = await params;
-
-  let actualLang: string;
-  let actualSlug: string[];
-  let isDefaultLocale: boolean;
-
-  if (lang === 'blog') {
-    actualLang = DEFAULT_LOCALE;
-    actualSlug = ['blog', ...slug];
-    isDefaultLocale = true;
-  } else if (VALID_LOCALES.includes(lang)) {
-    actualLang = lang;
-    actualSlug = slug;
-    isDefaultLocale = lang === DEFAULT_LOCALE;
-  } else {
-    actualLang = DEFAULT_LOCALE;
-    actualSlug = [lang, ...slug];
-    isDefaultLocale = true;
-  }
-
+  const { actualLang, actualSlug, isDefaultLocale } = parseRouteParams(lang, slug);
   const path = actualSlug.join('/');
-
-  // Skip favicon and other asset requests
+  
+  // Skip asset requests
   if (path.includes('favicon') || path.includes('.ico') || path.includes('uploads/')) {
     return null;
   }
 
-  const isArticle = isArticlePage(path);
-
-  if (isArticle) {
+  // Handle articles
+  if (isArticlePage(path)) {
     const articleSlug = getArticleSlug(path);
 
     try {
       const article: Article | null = await getArticleBySlug(articleSlug, actualLang);
 
       if (!article) {
-        return notFound();
+        notFound();
       }
 
       const processedArticle = processMediaUrls(article);
 
       return (
-        <Suspense fallback={<Spinner />}>
+        <>
+          <NavbarWithSuspense lang={actualLang} />
           <main className="bg-[#f7f5f2]">
             <ArticlePage
               article={processedArticle}
@@ -249,43 +233,52 @@ export default async function LanguagePageWithSlug({
               isDefaultLocale={isDefaultLocale}
             />
           </main>
-        </Suspense>
+          <Footer />
+          <BackToTopButton />
+        </>
       );
     } catch (error) {
-      console.error(`❌ Error fetching article:`, error);
-      return notFound();
+      console.error(`Error fetching article:`, error);
+      notFound();
     }
   }
   
+  // Handle regular pages
   try {
     const pageData = await getPageBySlug(path, actualLang);
 
     if (!pageData || (Array.isArray(pageData) && pageData.length === 0)) {
-      return notFound();
+      notFound();
     }
 
     const page = Array.isArray(pageData) ? pageData[0] : pageData;
 
     if (!page.sections || page.sections.length === 0) {
       return (
-        <Suspense fallback={<Spinner />}>
+        <>
+          <NavbarWithSuspense lang={actualLang} />
           <main className="container mx-auto px-4 py-12 mt-32">
             <h1 className="text-3xl font-bold mb-6">{page.title || path}</h1>
             <p>This page is currently under construction.</p>
           </main>
-        </Suspense>
+          <Footer />
+          <BackToTopButton />
+        </>
       );
     }
 
     return (
-      <Suspense fallback={<Spinner />}>
+      <>
+        <NavbarWithSuspense lang={actualLang} />
         <main className="bg-[#f7f5f2]">
           {renderPageSections(page.sections, actualLang)}
         </main>
-      </Suspense>
+        <Footer />
+        <BackToTopButton />
+      </>
     );
   } catch (error) {
-    console.error(`❌ Error loading regular page ${path} in ${actualLang}:`, error);
-    return notFound();
+    console.error(`Error loading page ${path} in ${actualLang}:`, error);
+    notFound();
   }
 }
